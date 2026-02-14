@@ -92,7 +92,7 @@ export class AuthProvider {
     let decoded: RefreshTokenVerify;
     try {
       decoded = this.jwtService.verify(token, {
-        algorithms: [algorithm as any],
+        algorithms: [algorithm as Algorithm],
         secret: secret!,
         ignoreExpiration: false,
       });
