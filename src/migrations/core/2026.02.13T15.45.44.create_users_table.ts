@@ -12,6 +12,7 @@ export const up: Migration = async ({ context: queryInterface }) => {
           type: DataType.UUID,
           primaryKey: true,
           allowNull: false,
+          defaultValue: Sequelize.literal('uuid_v7()'),
         },
         name: {
           type: DataType.STRING(100),
