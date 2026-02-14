@@ -20,12 +20,16 @@ export class CmsAuthService {
 
     const { accessToken, expiresIn } = this.authProvider.generateAccessToken(
       user.email,
+      user.role,
     );
 
     return {
       accessToken,
       expiresIn,
-      refreshToken: this.authProvider.generateRefreshToken(user.email),
+      refreshToken: this.authProvider.generateRefreshToken(
+        user.email,
+        user.role,
+      ),
     };
   }
 
@@ -42,6 +46,7 @@ export class CmsAuthService {
 
     const { accessToken, expiresIn } = this.authProvider.generateAccessToken(
       user.email,
+      user.role,
     );
 
     return {

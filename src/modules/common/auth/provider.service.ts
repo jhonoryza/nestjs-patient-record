@@ -1,8 +1,8 @@
 import { AuthConfigService } from '@config/auth/config.provider';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { DateTime } from 'luxon';
 import { Algorithm } from 'jsonwebtoken';
+import { DateTime } from 'luxon';
 import type { StringValue } from 'ms';
 
 interface RefreshTokenVerify {
@@ -25,6 +25,7 @@ export interface AccessTokenPayload extends JwtBasePayload {
 
 export interface RefreshTokenPayload extends JwtBasePayload {
   type: 'refresh';
+  role: string;
 }
 
 export interface AuthConfig {
@@ -40,7 +41,7 @@ export class AuthProvider {
     private readonly jwtService: JwtService,
   ) {}
 
-  generateAccessToken(userName: string) {
+  generateAccessToken(userName: string, role: string) {
     const {
       algorithm,
       refreshExpireTime: expiresIn,
@@ -49,7 +50,7 @@ export class AuthProvider {
     const expirationTime = `${expiresIn} second`;
     const payload: AccessTokenPayload = {
       sub: userName,
-      role: 'admin',
+      role,
       type: 'access',
     };
     const token = this.jwtService.sign<AccessTokenPayload>(payload, {
@@ -66,7 +67,7 @@ export class AuthProvider {
     };
   }
 
-  generateRefreshToken(userName: string) {
+  generateRefreshToken(userName: string, role: string) {
     const {
       algorithm,
       refreshExpireTime: expiresIn,
@@ -76,6 +77,7 @@ export class AuthProvider {
 
     const payload: RefreshTokenPayload = {
       sub: userName,
+      role,
       type: 'refresh',
     };
     return this.jwtService.sign<RefreshTokenPayload>(payload, {
