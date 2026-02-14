@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
+import { AppResolver } from 'app.resolver';
 import { ClsModule } from 'nestjs-cls';
+import { AppController } from './app.controller';
 import { CONFIG_MODULES, MIDDLEWARE_MODULES } from './app.provider';
-import { CommonModule } from './modules/common/common.module';
-import { CmsModule } from './modules/cms/cms.module';
+import { AppService } from './app.service';
 import { AppsModule } from './modules/apps/apps.module';
+import { CmsModule } from './modules/cms/cms.module';
+import { CommonModule } from './modules/common/common.module';
 
 @Module({
   imports: [
@@ -21,6 +22,6 @@ import { AppsModule } from './modules/apps/apps.module';
     AppsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, AppResolver],
 })
 export class AppModule {}
