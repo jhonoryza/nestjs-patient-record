@@ -44,7 +44,7 @@ export class AuthProvider {
   generateAccessToken(userName: string, role: string) {
     const {
       algorithm,
-      refreshExpireTime: expiresIn,
+      defaultExpireTime: expiresIn,
       secret,
     } = this.authConfigService;
     const expirationTime = `${expiresIn} second`;
@@ -96,8 +96,9 @@ export class AuthProvider {
         secret: secret!,
         ignoreExpiration: false,
       });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
-      throw new UnauthorizedException('Invalid refresh token: ' + e);
+      throw new UnauthorizedException('Invalid token');
     }
 
     if (decoded.type !== 'refresh') {
