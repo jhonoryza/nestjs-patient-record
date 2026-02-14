@@ -1,3 +1,4 @@
+import { ERole } from '@utils/enum';
 import {
   Column,
   DataType,
@@ -25,6 +26,6 @@ export class User extends Model {
   @Column(DataType.STRING)
   declare password: string;
 
-  @Column(DataType.ENUM('admin', 'doctor'))
-  declare role: 'admin' | 'doctor';
+  @Column(DataType.STRING)
+  declare role: ERole;
 }
