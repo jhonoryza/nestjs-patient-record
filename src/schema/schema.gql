@@ -2,6 +2,12 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+type CmsUser {
+  sub: String!
+  role: String!
+}
+
 type Query {
   getHealth: String!
+  getProfile: CmsUser!
 }

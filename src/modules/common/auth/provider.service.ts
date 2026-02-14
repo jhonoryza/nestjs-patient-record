@@ -5,13 +5,6 @@ import { Algorithm } from 'jsonwebtoken';
 import { DateTime } from 'luxon';
 import type { StringValue } from 'ms';
 
-interface RefreshTokenVerify {
-  sub: string;
-  type: 'refresh';
-  iat?: number;
-  exp?: number;
-}
-
 interface JwtBasePayload {
   sub: string;
   iat?: number;
@@ -41,7 +34,13 @@ export class AuthProvider {
     private readonly jwtService: JwtService,
   ) {}
 
-  generateAccessToken(userName: string, role: string) {
+  generateAccessToken(
+    userName: string,
+    role: string,
+  ): {
+    accessToken: string;
+    expiresIn: number;
+  } {
     const {
       algorithm,
       defaultExpireTime: expiresIn,
@@ -67,7 +66,7 @@ export class AuthProvider {
     };
   }
 
-  generateRefreshToken(userName: string, role: string) {
+  generateRefreshToken(userName: string, role: string): string {
     const {
       algorithm,
       refreshExpireTime: expiresIn,
@@ -87,9 +86,9 @@ export class AuthProvider {
     });
   }
 
-  verifyRefreshToken(token: string) {
+  verifyRefreshToken(token: string): RefreshTokenPayload {
     const { algorithm, secret } = this.authConfigService;
-    let decoded: RefreshTokenVerify;
+    let decoded: RefreshTokenPayload;
     try {
       decoded = this.jwtService.verify(token, {
         algorithms: [algorithm as Algorithm],
@@ -102,6 +101,26 @@ export class AuthProvider {
     }
 
     if (decoded.type !== 'refresh') {
+      throw new UnauthorizedException('Invalid token type');
+    }
+    return decoded;
+  }
+
+  verifyAccessToken(token: string): AccessTokenPayload {
+    const { algorithm, secret } = this.authConfigService;
+    let decoded: AccessTokenPayload;
+    try {
+      decoded = this.jwtService.verify(token, {
+        algorithms: [algorithm as Algorithm],
+        secret: secret!,
+        ignoreExpiration: false,
+      });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (e) {
+      throw new UnauthorizedException('Invalid token');
+    }
+
+    if (decoded.type !== 'access') {
       throw new UnauthorizedException('Invalid token type');
     }
     return decoded;
