@@ -4,6 +4,7 @@ import {
   DataType,
   Model,
   PrimaryKey,
+  Sequelize,
   Table,
 } from 'sequelize-typescript';
 
@@ -14,7 +15,10 @@ import {
 })
 export class User extends Model {
   @PrimaryKey
-  @Column(DataType.UUID)
+  @Column({
+    type: DataType.UUID,
+    defaultValue: Sequelize.literal('uuid_v7()'),
+  })
   declare id: string;
 
   @Column(DataType.STRING)

@@ -13,7 +13,7 @@ export enum EGender {
 
 export enum ERole {
   ADMIN = 'admin',
-  PATIENT = 'patient',
+  DOCTOR = 'doctor',
 }
 
 export enum EStatus {

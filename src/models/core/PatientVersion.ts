@@ -5,6 +5,7 @@ import {
   DataType,
   Model,
   PrimaryKey,
+  Sequelize,
   Table,
 } from 'sequelize-typescript';
 import { Patient } from './Patient';
@@ -16,7 +17,10 @@ import { Patient } from './Patient';
 })
 export class PatientVersion extends Model {
   @PrimaryKey
-  @Column(DataType.UUID)
+  @Column({
+    type: DataType.UUID,
+    defaultValue: Sequelize.literal('uuid_v7()'),
+  })
   declare id: string;
 
   @Column(DataType.UUID)

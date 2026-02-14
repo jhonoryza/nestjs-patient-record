@@ -5,50 +5,56 @@ export const databasePath = __dirname;
 export const up: Migration = async ({ context: queryInterface }) => {
   await queryInterface.sequelize.transaction(async (transaction) => {
     await queryInterface.sequelize.query(
+      `CREATE EXTENSION IF NOT EXISTS pgcrypto;`,
+      { transaction },
+    );
+    await queryInterface.sequelize.query(
       `
-        CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
-        CREATE OR REPLACE FUNCTION uuid_v7()
-        RETURNS uuid
-        AS $$
-        DECLARE
-            unix_ts_ms bigint;
-            rand_bytes bytea;
-            result bytea;
-        BEGIN
-            -- timestamp dalam milliseconds
-            unix_ts_ms := floor(extract(epoch FROM clock_timestamp()) * 1000);
-
-            -- 10 random bytes (80 bit)
-            rand_bytes := gen_random_bytes(10);
-
-            -- gabungkan timestamp (6 byte) + random
-            result :=
-                set_byte(set_byte(set_byte(set_byte(set_byte(set_byte(
-                    '\\x00000000000000000000000000000000'::bytea,
-                    0, (unix_ts_ms >> 40) & 255),
-                    1, (unix_ts_ms >> 32) & 255),
-                    2, (unix_ts_ms >> 24) & 255),
-                    3, (unix_ts_ms >> 16) & 255),
-                    4, (unix_ts_ms >> 8) & 255),
-                    5, unix_ts_ms & 255);
-
-            -- append random bytes
-            result := overlay(result placing rand_bytes from 7);
-
-            -- set version (7)
-            result := set_byte(result, 6,
-                (get_byte(result, 6) & 15) | (7 << 4)
-            );
-
-            -- set variant (RFC4122)
-            result := set_byte(result, 8,
-                (get_byte(result, 8) & 63) | 128
-            );
-
-            RETURN encode(result, 'hex')::uuid;
-        END;
-        $$ LANGUAGE plpgsql;
+      CREATE OR REPLACE FUNCTION public.uuid_v7()
+       RETURNS uuid
+       LANGUAGE plpgsql
+      AS $$
+      DECLARE
+          v_time timestamp with time zone;
+          v_secs bigint;
+          v_msec bigint;
+          v_usec bigint;
+      
+          v_timestamp bigint;
+          v_timestamp_hex varchar;
+      
+          v_random bigint;
+          v_random_hex varchar;
+      
+          v_hex varchar;
+      BEGIN
+          -- Get seconds and micros
+          v_time := clock_timestamp();
+          v_secs := EXTRACT(EPOCH FROM v_time);
+          v_msec := mod(EXTRACT(MILLISECONDS FROM v_time)::numeric, 10^3::numeric);
+          v_usec := mod(EXTRACT(MICROSECONDS FROM v_time)::numeric, 10^3::numeric);
+      
+          -- Generate timestamp hexadecimal (and set version 7)
+          v_timestamp := (((v_secs * 10^3) + v_msec)::bigint << 12) | (v_usec << 2);
+          v_timestamp_hex := lpad(to_hex(v_timestamp), 16, '0');
+          v_timestamp_hex := substr(v_timestamp_hex, 2, 12) || '7' || substr(v_timestamp_hex, 14, 3);
+      
+          -- Generate the random hexadecimal (and set variant b'10xx')
+          v_random := ((random()::numeric * 2^62::numeric)::bigint | (1<<63))::bigint;
+          v_random_hex := lpad(to_hex(v_random), 16, '0');
+      
+          -- Concat timestamp and random hexadecimal
+          v_hex := v_timestamp_hex || v_random_hex;
+      
+          -- Format jadi UUID (8-4-4-4-12)
+          v_hex := substring(v_hex from 1 for 8) || '-' ||
+                   substring(v_hex from 9 for 4) || '-' ||
+                   substring(v_hex from 13 for 4) || '-' ||
+                   substring(v_hex from 17 for 4) || '-' ||
+                   substring(v_hex from 21);
+      
+          RETURN v_hex::uuid;
+      END $$;
       `,
       { transaction },
     );
