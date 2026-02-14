@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { RouterModule } from '@nestjs/core';
 import { CmsAuthModule } from './auth/cms.auth.module';
 import { PatientModule } from './patient/patient.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { PatientModule } from './patient/patient.module';
       },
     ]),
     PatientModule,
+    UserModule,
   ],
 })
 export class CmsModule {}
