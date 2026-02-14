@@ -1,3 +1,4 @@
+import { GqlContext } from '@common/auth/guard/gql.guard';
 import {
   CallHandler,
   ExecutionContext,
@@ -8,12 +9,6 @@ import { GqlExecutionContext } from '@nestjs/graphql';
 import { Response } from 'express';
 import { projectVersion } from 'main';
 import { Observable, tap } from 'rxjs';
-
-interface GqlContext {
-  req: Request;
-  res: Response;
-  token?: string;
-}
 
 @Injectable()
 export class GlobalCustomResponseInterceptor<T> implements NestInterceptor<T> {
