@@ -183,6 +183,31 @@ export class CmsPatientService {
     });
   }
 
+  async show(id: string): Promise<CmsPatientVersion> {
+    const latestVersion = await PatientVersion.findOne({
+      where: { patientId: id },
+      order: [['version', 'DESC']],
+    });
+
+    if (!latestVersion) {
+      throw new HttpException('Patient not found', 404);
+    }
+
+    return {
+      id: latestVersion.id,
+      patientId: latestVersion.patientId,
+      version: latestVersion.version,
+      fullName: latestVersion.fullName,
+      birthDate: latestVersion.birthDate,
+      gender: latestVersion.gender,
+      diagnosis: latestVersion.diagnosis,
+      medicalNotes: latestVersion.medicalNotes,
+      changeType: latestVersion.changeType,
+      updatedBy: latestVersion.updatedBy,
+      updatedAt: latestVersion.updatedAt,
+    };
+  }
+
   async update(
     requesterDto: RequesterDto,
     id: string,

@@ -60,6 +60,32 @@ export class PatientResolver {
 
   /**
    *
+   query {
+     getPatient(id: "patient-id") {
+       id
+       patientId
+       version
+       fullName
+       birthDate
+       gender
+       diagnosis
+       medicalNotes
+       changeType
+       updatedBy
+       updatedAt
+     }
+   }
+   */
+  @Query(() => CmsPatientVersion)
+  @UseGuards(GqlAuthGuard)
+  getPatient(
+    @Args('id', { type: () => String }) id: string,
+  ): Promise<CmsPatientVersion> {
+    return this.cmsPatientService.show(id);
+  }
+
+  /**
+   *
    mutation {
      storePatient(
        data: {

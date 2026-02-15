@@ -191,6 +191,27 @@ query {
 }
 ```
 
+#### getPatient
+Get a specific patient version. Only authenticated users can access this query.
+
+```graphql
+query {
+  getPatient(id: "patient-id") {
+    id
+    patientId
+    version
+    fullName
+    birthDate
+    gender
+    diagnosis
+    medicalNotes
+    changeType
+    updatedBy
+    updatedAt
+  }
+}
+```
+
 #### getAuditLog
 Get audit log of all versions for a specific patient. Only admin role can access this query.
 

@@ -45,6 +45,11 @@ export class CreateDto {
   diagnosis!: string;
 
   @Field()
+  @IsOptional()
+  @IsString()
+  medicalNotes!: string;
+
+  @Field()
   @IsNotEmpty()
   @IsDateString()
   birthDate!: string;

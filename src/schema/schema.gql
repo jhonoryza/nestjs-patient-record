@@ -55,6 +55,7 @@ type CmsUser {
 type Query {
   getHealth: String!
   getPatients(input: PatientListArgs): CmsPatientListResponse!
+  getPatient(id: String!): CmsPatientVersion!
   getAuditLog(patientId: String!): [CmsPatientVersion!]!
   getProfile: CmsUser!
 }
@@ -76,6 +77,7 @@ input CreateDto {
   idCard: String!
   fullName: String!
   diagnosis: String!
+  medicalNotes: String!
   birthDate: String!
   gender: String!
   changeType: String!
