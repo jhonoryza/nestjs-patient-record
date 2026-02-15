@@ -1,14 +1,15 @@
 import { Patient } from '@models/core/Patient';
 import { PatientVersion } from '@models/core/PatientVersion';
 import { HttpException, Injectable } from '@nestjs/common';
-import { ERole, EStatus } from '@utils/enum';
+import { EChangeType, ERole, EStatus } from '@utils/enum';
 import { DateTime } from 'luxon';
 import { QueryTypes } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript';
-import { CreateDto } from '../requests/cms.patient.request';
+import { CreateDto, UpdateDto } from '../requests/cms.patient.request';
 import {
   CmsPatient,
   CmsPatientListResponse,
+  CmsPatientVersion,
 } from '../viewmodels/cms.patient.viewmodel';
 
 type PatientRow = {
@@ -134,9 +135,25 @@ export class CmsPatientService {
       throw new HttpException('Patient with this idCard already exists', 400);
     }
     return this.sequelize.transaction(async (t) => {
+      const latestVersion = await PatientVersion.findOne({
+        include: [
+          {
+            model: Patient,
+            as: 'patient',
+            attributes: ['id'],
+            where: { idCard: dataDto.idCard },
+          },
+        ],
+        order: [['version', 'DESC']],
+        transaction: t,
+      });
+
+      const nextVersion = (latestVersion?.version ?? 0) + 1;
+
       const patient = await Patient.create(
         {
           idCard: dataDto.idCard,
+          version: nextVersion,
           status: EStatus.ACTIVE,
           createdBy: requesterDto.sub,
           createdAt: DateTime.now(),
@@ -167,6 +184,379 @@ export class CmsPatientService {
       };
 
       return patientRow;
+    });
+  }
+
+  async update(
+    requesterDto: RequesterDto,
+    id: string,
+    dataDto: UpdateDto,
+  ): Promise<CmsPatient> {
+    if (!requesterDto.role) {
+      throw new HttpException(
+        'You are not allowed to perform this action',
+        403,
+      );
+    }
+
+    if (requesterDto.role === ERole.ADMIN) {
+      throw new HttpException(
+        'You are not allowed to perform this action',
+        403,
+      );
+    }
+
+    const patient = await Patient.findOne({
+      where: { id },
+    });
+
+    if (!patient) {
+      throw new HttpException('Patient not found', 404);
+    }
+
+    if (patient.status === EStatus.TRASH) {
+      throw new HttpException('Cannot update a trashed patient', 400);
+    }
+
+    return this.sequelize.transaction(async (t) => {
+      const latestVersion = await PatientVersion.findOne({
+        where: { patientId: patient.id },
+        order: [['version', 'DESC']],
+        transaction: t,
+      });
+
+      const nextVersion = (latestVersion?.version ?? 0) + 1;
+
+      const patientVersion = await PatientVersion.create(
+        {
+          patientId: patient.id,
+          version: nextVersion,
+          fullName: dataDto.fullName,
+          birthDate: dataDto.birthDate,
+          gender: dataDto.gender,
+          diagnosis: dataDto.diagnosis,
+          medicalNotes: dataDto.medicalNotes ?? null,
+          changeType: EChangeType.UPDATE,
+          updatedBy: requesterDto.sub,
+          updatedAt: DateTime.now(),
+        },
+        { transaction: t },
+      );
+
+      const patientRow: CmsPatient = {
+        id: patient.id,
+        idCard: patient.idCard,
+        status: patient.status,
+        fullName: patientVersion.fullName,
+        diagnosis: patientVersion.diagnosis,
+        createdAt: patient.createdAt,
+        createdBy: patient.createdBy,
+        updatedAt: patientVersion.updatedAt,
+        updatedBy: patientVersion.updatedBy,
+      };
+
+      return patientRow;
+    });
+  }
+
+  async delete(requesterDto: RequesterDto, id: string): Promise<CmsPatient> {
+    if (!requesterDto.role) {
+      throw new HttpException(
+        'You are not allowed to perform this action',
+        403,
+      );
+    }
+
+    if (requesterDto.role === ERole.ADMIN) {
+      throw new HttpException(
+        'You are not allowed to perform this action',
+        403,
+      );
+    }
+
+    const patient = await Patient.findOne({
+      where: { id },
+    });
+
+    if (!patient) {
+      throw new HttpException('Patient not found', 404);
+    }
+
+    if (patient.status === EStatus.TRASH) {
+      throw new HttpException('Patient already in trash', 400);
+    }
+
+    return this.sequelize.transaction(async (t) => {
+      const latestVersion = await PatientVersion.findOne({
+        where: { patientId: patient.id },
+        order: [['version', 'DESC']],
+        transaction: t,
+      });
+
+      const nextVersion = (latestVersion?.version ?? 0) + 1;
+
+      const latestVersionData = await PatientVersion.findOne({
+        where: { patientId: patient.id },
+        order: [
+          ['updatedAt', 'DESC'],
+          ['id', 'DESC'],
+        ],
+        transaction: t,
+      });
+
+      await patient.update(
+        {
+          status: EStatus.TRASH,
+          trashedAt: DateTime.now().toJSDate(),
+        },
+        { transaction: t },
+      );
+
+      const patientVersion = await PatientVersion.create(
+        {
+          patientId: patient.id,
+          version: nextVersion,
+          fullName: latestVersionData!.fullName,
+          birthDate: latestVersionData!.birthDate,
+          gender: latestVersionData!.gender,
+          diagnosis: latestVersionData!.diagnosis,
+          medicalNotes: latestVersionData!.medicalNotes,
+          changeType: EChangeType.DELETE,
+          updatedBy: requesterDto.sub,
+          updatedAt: DateTime.now(),
+        },
+        { transaction: t },
+      );
+
+      const { id: patientId, idCard, status, createdAt, createdBy } = patient;
+      const { fullName, diagnosis, updatedAt, updatedBy } = patientVersion;
+
+      return {
+        id: patientId,
+        idCard,
+        status,
+        fullName,
+        diagnosis,
+        createdAt,
+        createdBy,
+        updatedAt,
+        updatedBy,
+      };
+    });
+  }
+
+  async restore(requesterDto: RequesterDto, id: string): Promise<CmsPatient> {
+    if (!requesterDto.role) {
+      throw new HttpException(
+        'You are not allowed to perform this action',
+        403,
+      );
+    }
+
+    if (requesterDto.role === ERole.ADMIN) {
+      throw new HttpException(
+        'You are not allowed to perform this action',
+        403,
+      );
+    }
+
+    const patient = await Patient.findOne({
+      where: { id },
+    });
+
+    if (!patient) {
+      throw new HttpException('Patient not found', 404);
+    }
+
+    if (patient.status === EStatus.ACTIVE) {
+      throw new HttpException('Patient is already active', 400);
+    }
+
+    return this.sequelize.transaction(async (t) => {
+      const latestVersion = await PatientVersion.findOne({
+        where: { patientId: patient.id },
+        order: [['version', 'DESC']],
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+
+      const nextVersion = (latestVersion?.version ?? 0) + 1;
+
+      const latestVersionData = await PatientVersion.findOne({
+        where: { patientId: patient.id },
+        order: [
+          ['updatedAt', 'DESC'],
+          ['id', 'DESC'],
+        ],
+        transaction: t,
+      });
+
+      await patient.update(
+        {
+          status: EStatus.ACTIVE,
+          trashedAt: null,
+        },
+        { transaction: t },
+      );
+
+      const patientVersion = await PatientVersion.create(
+        {
+          patientId: patient.id,
+          version: nextVersion,
+          fullName: latestVersionData!.fullName,
+          birthDate: latestVersionData!.birthDate,
+          gender: latestVersionData!.gender,
+          diagnosis: latestVersionData!.diagnosis,
+          medicalNotes: latestVersionData!.medicalNotes,
+          changeType: EChangeType.RESTORE,
+          updatedBy: requesterDto.sub,
+          updatedAt: DateTime.now(),
+        },
+        { transaction: t },
+      );
+
+      const { id: patientId, idCard, status, createdAt, createdBy } = patient;
+      const { fullName, diagnosis, updatedAt, updatedBy } = patientVersion;
+
+      return {
+        id: patientId,
+        idCard,
+        status,
+        fullName,
+        diagnosis,
+        createdAt,
+        createdBy,
+        updatedAt,
+        updatedBy,
+      };
+    });
+  }
+
+  async getAuditLog(
+    requesterDto: RequesterDto,
+    patientId: string,
+  ): Promise<CmsPatientVersion[]> {
+    if (!requesterDto.role) {
+      throw new HttpException(
+        'You are not allowed to perform this action',
+        403,
+      );
+    }
+
+    if (requesterDto.role !== ERole.ADMIN) {
+      throw new HttpException('Only admin can view audit logs', 403);
+    }
+
+    const patient = await Patient.findOne({
+      where: { id: patientId },
+    });
+
+    if (!patient) {
+      throw new HttpException('Patient not found', 404);
+    }
+
+    const versions = await PatientVersion.findAll({
+      where: { patientId },
+      order: [
+        ['version', 'DESC'],
+        ['updatedAt', 'DESC'],
+        ['id', 'DESC'],
+      ],
+    });
+
+    return versions.map((v) => ({
+      id: v.id,
+      patientId: v.patientId,
+      version: v.version,
+      fullName: v.fullName,
+      birthDate: v.birthDate,
+      gender: v.gender,
+      diagnosis: v.diagnosis,
+      medicalNotes: v.medicalNotes,
+      changeType: v.changeType,
+      updatedBy: v.updatedBy,
+      updatedAt: v.updatedAt,
+    }));
+  }
+
+  async rollback(
+    requesterDto: RequesterDto,
+    patientId: string,
+    versionId: string,
+  ): Promise<CmsPatient> {
+    if (!requesterDto.role) {
+      throw new HttpException(
+        'You are not allowed to perform this action',
+        403,
+      );
+    }
+
+    if (requesterDto.role !== ERole.ADMIN) {
+      throw new HttpException('Only admin can perform this action', 403);
+    }
+
+    const patient = await Patient.findOne({
+      where: { id: patientId },
+    });
+
+    if (!patient) {
+      throw new HttpException('Patient not found', 404);
+    }
+
+    if (patient.status === EStatus.TRASH) {
+      throw new HttpException('Cannot rollback a trashed patient', 400);
+    }
+
+    const targetVersion = await PatientVersion.findOne({
+      where: {
+        version: versionId,
+        patientId,
+      },
+    });
+
+    if (!targetVersion) {
+      throw new HttpException('Version not found', 404);
+    }
+
+    return this.sequelize.transaction(async (t) => {
+      const latestVersion = await PatientVersion.findOne({
+        where: { patientId: patient.id },
+        order: [['version', 'DESC']],
+        transaction: t,
+      });
+
+      const nextVersion = (latestVersion?.version ?? 0) + 1;
+
+      const patientVersion = await PatientVersion.create(
+        {
+          patientId: patient.id,
+          version: nextVersion,
+          fullName: targetVersion.fullName,
+          birthDate: targetVersion.birthDate,
+          gender: targetVersion.gender,
+          diagnosis: targetVersion.diagnosis,
+          medicalNotes: targetVersion.medicalNotes,
+          changeType: EChangeType.ROLLBACK,
+          updatedBy: requesterDto.sub,
+          updatedAt: DateTime.now(),
+        },
+        { transaction: t },
+      );
+
+      const { id: pId, idCard, status, createdAt, createdBy } = patient;
+      const { fullName, diagnosis, updatedAt, updatedBy } = patientVersion;
+
+      return {
+        id: pId,
+        idCard,
+        status,
+        fullName,
+        diagnosis,
+        createdAt,
+        createdBy,
+        updatedAt,
+        updatedBy,
+      };
     });
   }
 }

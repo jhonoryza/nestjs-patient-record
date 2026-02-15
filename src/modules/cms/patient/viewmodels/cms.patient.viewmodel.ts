@@ -1,4 +1,5 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
+import { EChangeType, EGender } from '@utils/enum';
 
 @ObjectType()
 export class CmsPatient {
@@ -58,4 +59,40 @@ export class CmsPatientListResponse {
 
   @Field(() => PaginationMeta)
   meta!: PaginationMeta;
+}
+
+@ObjectType()
+export class CmsPatientVersion {
+  @Field()
+  id!: string;
+
+  @Field()
+  patientId!: string;
+
+  @Field(() => Int)
+  version!: number;
+
+  @Field()
+  fullName!: string;
+
+  @Field()
+  birthDate!: string;
+
+  @Field()
+  gender!: EGender;
+
+  @Field()
+  diagnosis!: string;
+
+  @Field(() => String, { nullable: true })
+  medicalNotes!: string | null;
+
+  @Field()
+  changeType!: EChangeType;
+
+  @Field()
+  updatedBy!: string;
+
+  @Field()
+  updatedAt!: Date;
 }

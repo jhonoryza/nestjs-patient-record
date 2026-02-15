@@ -59,3 +59,52 @@ export class CreateDto {
   @IsEnum(EChangeType)
   changeType: EChangeType;
 }
+
+@InputType()
+export class IdInput {
+  @Field()
+  @IsNotEmpty()
+  @IsString()
+  id!: string;
+}
+
+@InputType()
+export class UpdateDto {
+  @Field()
+  @IsNotEmpty()
+  @IsString()
+  fullName!: string;
+
+  @Field()
+  @IsNotEmpty()
+  @IsString()
+  diagnosis!: string;
+
+  @Field()
+  @IsNotEmpty()
+  @IsDateString()
+  birthDate!: string;
+
+  @Field()
+  @IsNotEmpty()
+  @IsString()
+  gender!: EGender;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  medicalNotes?: string;
+}
+
+@InputType()
+export class RollbackDto {
+  @Field()
+  @IsNotEmpty()
+  @IsString()
+  patientId!: string;
+
+  @Field()
+  @IsNotEmpty()
+  @IsString()
+  versionId!: string;
+}

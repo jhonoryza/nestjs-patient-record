@@ -33,6 +33,20 @@ type CmsPatientListResponse {
   meta: PaginationMeta!
 }
 
+type CmsPatientVersion {
+  id: String!
+  patientId: String!
+  version: Int!
+  fullName: String!
+  birthDate: String!
+  gender: String!
+  diagnosis: String!
+  medicalNotes: String
+  changeType: String!
+  updatedBy: String!
+  updatedAt: DateTime!
+}
+
 type CmsUser {
   sub: String!
   role: String!
@@ -41,6 +55,7 @@ type CmsUser {
 type Query {
   getHealth: String!
   getPatients(input: PatientListArgs): CmsPatientListResponse!
+  getAuditLog(patientId: String!): [CmsPatientVersion!]!
   getProfile: CmsUser!
 }
 
@@ -51,6 +66,10 @@ input PatientListArgs {
 
 type Mutation {
   storePatient(data: CreateDto!): CmsPatient!
+  updatePatient(id: String!, data: UpdateDto!): CmsPatient!
+  deletePatient(id: String!): CmsPatient!
+  restorePatient(id: String!): CmsPatient!
+  rollbackPatient(data: RollbackDto!): CmsPatient!
 }
 
 input CreateDto {
@@ -60,4 +79,17 @@ input CreateDto {
   birthDate: String!
   gender: String!
   changeType: String!
+}
+
+input UpdateDto {
+  fullName: String!
+  diagnosis: String!
+  birthDate: String!
+  gender: String!
+  medicalNotes: String
+}
+
+input RollbackDto {
+  patientId: String!
+  versionId: String!
 }

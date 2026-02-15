@@ -35,8 +35,8 @@ export class PatientVersion extends Model {
   @Column(DataType.STRING)
   declare fullName: string;
 
-  @Column(DataType.DATEONLY)
-  declare birthDate: Date;
+  @Column(DataType.DATE)
+  declare birthDate: string;
 
   @Column(DataType.STRING)
   declare gender: EGender;

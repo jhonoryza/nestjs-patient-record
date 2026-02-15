@@ -26,7 +26,6 @@ export const up: Migration = async ({ context: queryInterface }) => {
         version: {
           type: DataType.INTEGER,
           allowNull: false,
-          unique: true,
           autoIncrement: true,
         },
         full_name: {
@@ -71,6 +70,14 @@ export const up: Migration = async ({ context: queryInterface }) => {
       {
         transaction,
       },
+    );
+
+    await queryInterface.sequelize.query(
+      `
+      ALTER TABLE patient_versions
+      ADD CONSTRAINT patient_unique_version UNIQUE (patient_id, version);
+        `,
+      { transaction },
     );
 
     await queryInterface.sequelize.query(
