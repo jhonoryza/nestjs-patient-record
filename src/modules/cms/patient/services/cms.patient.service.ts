@@ -1,6 +1,8 @@
+import { GRACE_PERIOD_MINUTES } from '@common/queues/patient-cleanup/patient-cleanup.constants';
+import { PatientCleanupService } from '@common/queues/patient-cleanup/patient-cleanup.service';
 import { Patient } from '@models/core/Patient';
 import { PatientVersion } from '@models/core/PatientVersion';
-import { HttpException, Injectable } from '@nestjs/common';
+import { HttpException, Injectable, Logger } from '@nestjs/common';
 import { EChangeType, ERole, EStatus } from '@utils/enum';
 import { DateTime } from 'luxon';
 import { QueryTypes } from 'sequelize';
@@ -40,7 +42,12 @@ type RequesterDto = {
 
 @Injectable()
 export class CmsPatientService {
-  constructor(private readonly sequelize: Sequelize) {}
+  private readonly logger = new Logger(CmsPatientService.name);
+
+  constructor(
+    private readonly sequelize: Sequelize,
+    private readonly patientCleanupService: PatientCleanupService,
+  ) {}
 
   async index(args?: PaginationArgs): Promise<CmsPatientListResponse> {
     const page = Math.max(args?.page ?? 1, 1);
@@ -113,19 +120,7 @@ export class CmsPatientService {
     requesterDto: RequesterDto,
     dataDto: CreateDto,
   ): Promise<CmsPatient> {
-    if (!requesterDto.role) {
-      throw new HttpException(
-        'You are not allowed to perform this action',
-        403,
-      );
-    }
-
-    if (requesterDto.role === ERole.ADMIN) {
-      throw new HttpException(
-        'You are not allowed to perform this action',
-        403,
-      );
-    }
+    this.ensureRoleIsDoctor(requesterDto);
     const existingPatient = await Patient.findOne({
       where: {
         idCard: dataDto.idCard,
@@ -183,6 +178,7 @@ export class CmsPatientService {
         updatedBy: patientVersion.updatedBy,
       };
 
+      this.logger.log(`Successfully created patient: ${patient.id}`);
       return patientRow;
     });
   }
@@ -192,19 +188,7 @@ export class CmsPatientService {
     id: string,
     dataDto: UpdateDto,
   ): Promise<CmsPatient> {
-    if (!requesterDto.role) {
-      throw new HttpException(
-        'You are not allowed to perform this action',
-        403,
-      );
-    }
-
-    if (requesterDto.role === ERole.ADMIN) {
-      throw new HttpException(
-        'You are not allowed to perform this action',
-        403,
-      );
-    }
+    this.ensureRoleIsDoctor(requesterDto);
 
     const patient = await Patient.findOne({
       where: { id },
@@ -255,24 +239,13 @@ export class CmsPatientService {
         updatedBy: patientVersion.updatedBy,
       };
 
+      this.logger.log(`Successfully updated patient: ${patient.id}`);
       return patientRow;
     });
   }
 
   async delete(requesterDto: RequesterDto, id: string): Promise<CmsPatient> {
-    if (!requesterDto.role) {
-      throw new HttpException(
-        'You are not allowed to perform this action',
-        403,
-      );
-    }
-
-    if (requesterDto.role === ERole.ADMIN) {
-      throw new HttpException(
-        'You are not allowed to perform this action',
-        403,
-      );
-    }
+    this.ensureRoleIsDoctor(requesterDto);
 
     const patient = await Patient.findOne({
       where: { id },
@@ -331,6 +304,11 @@ export class CmsPatientService {
       const { id: patientId, idCard, status, createdAt, createdBy } = patient;
       const { fullName, diagnosis, updatedAt, updatedBy } = patientVersion;
 
+      await this.patientCleanupService.scheduleCleanup(patientId);
+
+      this.logger.log(
+        `Successfully trashed patient: ${patient.id}, scheduling cleanup job`,
+      );
       return {
         id: patientId,
         idCard,
@@ -346,19 +324,7 @@ export class CmsPatientService {
   }
 
   async restore(requesterDto: RequesterDto, id: string): Promise<CmsPatient> {
-    if (!requesterDto.role) {
-      throw new HttpException(
-        'You are not allowed to perform this action',
-        403,
-      );
-    }
-
-    if (requesterDto.role === ERole.ADMIN) {
-      throw new HttpException(
-        'You are not allowed to perform this action',
-        403,
-      );
-    }
+    this.ensureRoleIsDoctor(requesterDto);
 
     const patient = await Patient.findOne({
       where: { id },
@@ -368,8 +334,22 @@ export class CmsPatientService {
       throw new HttpException('Patient not found', 404);
     }
 
-    if (patient.status === EStatus.ACTIVE) {
-      throw new HttpException('Patient is already active', 400);
+    if (patient.status !== EStatus.TRASH || patient.trashedAt === null) {
+      throw new HttpException('Patient is not in trash, cannot restore', 400);
+    }
+
+    const trashedAt = DateTime.fromJSDate(patient.trashedAt);
+    const now = DateTime.now();
+    const minutesSinceTrashed = now.diff(trashedAt, 'minutes').minutes;
+
+    if (minutesSinceTrashed > GRACE_PERIOD_MINUTES) {
+      this.logger.log(
+        `Grace period exceeded for patient ${id}, patient has been permanently deleted`,
+      );
+      throw new HttpException(
+        'Grace period exceeded, patient has been permanently deleted',
+        410,
+      );
     }
 
     return this.sequelize.transaction(async (t) => {
@@ -418,6 +398,9 @@ export class CmsPatientService {
       const { id: patientId, idCard, status, createdAt, createdBy } = patient;
       const { fullName, diagnosis, updatedAt, updatedBy } = patientVersion;
 
+      this.logger.log(
+        `Successfully restored patient: ${patient.id}, scheduling cleanup job`,
+      );
       return {
         id: patientId,
         idCard,
@@ -436,16 +419,7 @@ export class CmsPatientService {
     requesterDto: RequesterDto,
     patientId: string,
   ): Promise<CmsPatientVersion[]> {
-    if (!requesterDto.role) {
-      throw new HttpException(
-        'You are not allowed to perform this action',
-        403,
-      );
-    }
-
-    if (requesterDto.role !== ERole.ADMIN) {
-      throw new HttpException('Only admin can view audit logs', 403);
-    }
+    this.ensureRoleIsAdmin(requesterDto);
 
     const patient = await Patient.findOne({
       where: { id: patientId },
@@ -484,16 +458,7 @@ export class CmsPatientService {
     patientId: string,
     versionId: string,
   ): Promise<CmsPatient> {
-    if (!requesterDto.role) {
-      throw new HttpException(
-        'You are not allowed to perform this action',
-        403,
-      );
-    }
-
-    if (requesterDto.role !== ERole.ADMIN) {
-      throw new HttpException('Only admin can perform this action', 403);
-    }
+    this.ensureRoleIsAdmin(requesterDto);
 
     const patient = await Patient.findOne({
       where: { id: patientId },
@@ -546,6 +511,7 @@ export class CmsPatientService {
       const { id: pId, idCard, status, createdAt, createdBy } = patient;
       const { fullName, diagnosis, updatedAt, updatedBy } = patientVersion;
 
+      this.logger.log(`Successfully rolled back patient: ${pId}`);
       return {
         id: pId,
         idCard,
@@ -558,5 +524,37 @@ export class CmsPatientService {
         updatedBy,
       };
     });
+  }
+
+  private ensureRoleIsAdmin(requesterDto: RequesterDto) {
+    if (!requesterDto.role) {
+      throw new HttpException(
+        'You are not allowed to perform this action',
+        403,
+      );
+    }
+
+    if (requesterDto.role !== ERole.ADMIN) {
+      throw new HttpException(
+        'You are not allowed to perform this action',
+        403,
+      );
+    }
+  }
+
+  private ensureRoleIsDoctor(requesterDto: RequesterDto) {
+    if (!requesterDto.role) {
+      throw new HttpException(
+        'You are not allowed to perform this action',
+        403,
+      );
+    }
+
+    if (requesterDto.role !== ERole.DOCTOR) {
+      throw new HttpException(
+        'You are not allowed to perform this action',
+        403,
+      );
+    }
   }
 }
