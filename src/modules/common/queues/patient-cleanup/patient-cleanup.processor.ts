@@ -4,12 +4,17 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { EStatus } from '@utils/enum';
 import { Job } from 'bullmq';
+import { Sequelize } from 'sequelize-typescript';
 import { PATIENT_CLEANUP_QUEUE } from './patient-cleanup.constants';
 
 @Injectable()
 @Processor(PATIENT_CLEANUP_QUEUE)
 export class PatientCleanupProcessor extends WorkerHost {
   private readonly logger = new Logger(PatientCleanupProcessor.name);
+
+  constructor(private readonly sequelize: Sequelize) {
+    super();
+  }
 
   async process(job: Job<{ patientId: string }>): Promise<void> {
     const { patientId } = job.data;
@@ -32,19 +37,22 @@ export class PatientCleanupProcessor extends WorkerHost {
         return;
       }
 
-      const deletedVersions = await PatientVersion.destroy({
-        where: { patientId },
+      await this.sequelize.transaction(async (transaction) => {
+        const deletedVersions = await PatientVersion.destroy({
+          where: { patientId },
+          transaction,
+        });
+
+        this.logger.log(
+          `Deleted ${deletedVersions} versions for patient: ${patientId}`,
+        );
+
+        await patient.destroy({ transaction });
+
+        this.logger.log(
+          `Successfully hard deleted patient and all versions: ${patientId}`,
+        );
       });
-
-      this.logger.log(
-        `Deleted ${deletedVersions} versions for patient: ${patientId}`,
-      );
-
-      await patient.destroy();
-
-      this.logger.log(
-        `Successfully hard deleted patient and all versions: ${patientId}`,
-      );
     } catch (error) {
       this.logger.error(`Failed to cleanup patient: ${patientId}`, error);
       throw error;
