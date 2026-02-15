@@ -19,33 +19,30 @@ export class CmsAuthService {
     }
 
     const { accessToken, expiresIn } = this.authProvider.generateAccessToken(
-      user.email,
+      user.id,
       user.role,
     );
 
     return {
       accessToken,
       expiresIn,
-      refreshToken: this.authProvider.generateRefreshToken(
-        user.email,
-        user.role,
-      ),
+      refreshToken: this.authProvider.generateRefreshToken(user.id, user.role),
     };
   }
 
   public async refresh(req: RefreshTokenDto) {
     const decoded = this.authProvider.verifyRefreshToken(req.refreshToken);
 
-    const userEmail = decoded.sub;
+    const userId = decoded.sub;
 
-    const user = await this.validateEmail(userEmail);
+    const user = await this.validateId(userId);
 
     if (!user) {
       throw new UnauthorizedException();
     }
 
     const { accessToken, expiresIn } = this.authProvider.generateAccessToken(
-      user.email,
+      user.id,
       user.role,
     );
 
@@ -59,9 +56,7 @@ export class CmsAuthService {
     email: string,
     password: string,
   ): Promise<User | null> {
-    const user = await User.findOne({
-      where: { email },
-    });
+    const user = await this.validateEmail(email);
 
     if (!user) {
       return null;
@@ -79,6 +74,12 @@ export class CmsAuthService {
   private async validateEmail(email: string) {
     return User.findOne({
       where: { email },
+    });
+  }
+
+  private async validateId(id: string) {
+    return User.findOne({
+      where: { id },
     });
   }
 }

@@ -24,7 +24,7 @@ export class PatientVersion extends Model {
   declare id: string;
 
   @Column(DataType.UUID)
-  declare patient_id: string;
+  declare patientId: string;
 
   @BelongsTo(() => Patient, 'patient_id')
   declare patient: Patient;
@@ -33,10 +33,10 @@ export class PatientVersion extends Model {
   declare version: number;
 
   @Column(DataType.STRING)
-  declare full_name: string;
+  declare fullName: string;
 
   @Column(DataType.DATEONLY)
-  declare birth_date: Date;
+  declare birthDate: Date;
 
   @Column(DataType.STRING)
   declare gender: EGender;
@@ -48,14 +48,14 @@ export class PatientVersion extends Model {
     type: DataType.STRING,
     allowNull: true,
   })
-  declare medical_notes: string | null;
+  declare medicalNotes: string | null;
 
   @Column(DataType.STRING)
-  declare change_type: EChangeType;
+  declare changeType: EChangeType;
 
   @Column(DataType.STRING)
-  declare updated_by: string;
+  declare updatedBy: string;
 
   @Column(DataType.DATE)
-  declare created_at: Date;
+  declare updatedAt: Date;
 }

@@ -14,6 +14,11 @@ export const up: Migration = async ({ context: queryInterface }) => {
           allowNull: false,
           defaultValue: Sequelize.literal('uuid_v7()'),
         },
+        id_card: {
+          type: DataType.STRING,
+          allowNull: false,
+          unique: true,
+        },
         created_at: {
           type: DataType.DATE,
           allowNull: false,

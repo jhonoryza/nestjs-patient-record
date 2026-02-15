@@ -1,6 +1,8 @@
 import { Body, Controller, Post } from '@nestjs/common';
+import { transformer } from '@utils/helper';
 import { CmsAuthService } from '../services/cms.auth.service';
-import { UserLoginDto, RefreshTokenDto } from './requests/cms.auth.request';
+import { RefreshTokenDto, UserLoginDto } from './requests/cms.auth.request';
+import { CmsAuthVm } from './viewmodels/cms.auth.viewmodel';
 
 @Controller({
   path: 'auth',
@@ -11,11 +13,11 @@ export class CmsAuthController {
 
   @Post('login')
   async login(@Body() body: UserLoginDto) {
-    return this.service.login(body);
+    return transformer(CmsAuthVm, await this.service.login(body));
   }
 
   @Post('refresh')
   async refresh(@Body() req: RefreshTokenDto) {
-    return this.service.refresh(req);
+    return transformer(CmsAuthVm, await this.service.refresh(req));
   }
 }

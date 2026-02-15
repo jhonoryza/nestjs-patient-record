@@ -27,6 +27,7 @@ export const up: Migration = async ({ context: queryInterface }) => {
           type: DataType.INTEGER,
           allowNull: false,
           unique: true,
+          autoIncrement: true,
         },
         full_name: {
           type: DataType.STRING(150),
@@ -57,7 +58,7 @@ export const up: Migration = async ({ context: queryInterface }) => {
           },
           onDelete: 'RESTRICT',
         },
-        created_at: {
+        updated_at: {
           type: DataType.DATE,
           allowNull: false,
           defaultValue: Sequelize.literal('now()'),

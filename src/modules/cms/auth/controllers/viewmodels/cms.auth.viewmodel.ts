@@ -2,14 +2,11 @@ import { Expose } from 'class-transformer';
 
 export class CmsAuthVm {
   @Expose()
-  id: number;
+  accessToken: string;
 
   @Expose()
-  name: string;
+  expiresIn: number;
 
   @Expose()
-  email: string;
-
-  @Expose()
-  role: string;
+  refreshToken?: string;
 }

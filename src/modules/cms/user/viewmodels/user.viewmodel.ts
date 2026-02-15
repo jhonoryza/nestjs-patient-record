@@ -1,4 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql';
+import { ERole } from '@utils/enum';
 
 @ObjectType()
 export class CmsUser {
@@ -6,5 +7,5 @@ export class CmsUser {
   sub: string;
 
   @Field()
-  role: string;
+  role: ERole | string;
 }

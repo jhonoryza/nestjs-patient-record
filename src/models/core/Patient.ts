@@ -23,6 +23,9 @@ export class Patient extends Model {
   })
   declare id: string;
 
+  @Column(DataType.STRING)
+  declare idCard: string;
+
   @Column(DataType.UUID)
   declare createdBy: string;
 
@@ -33,7 +36,7 @@ export class Patient extends Model {
   declare status: EStatus;
 
   @Column(DataType.DATE)
-  declare createdAt: Date | null;
+  declare createdAt: Date;
 
   @Column(DataType.DATE)
   declare trashedAt: Date | null;

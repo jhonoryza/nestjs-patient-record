@@ -2,6 +2,37 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+type CmsPatient {
+  id: String!
+  status: String!
+  idCard: String!
+  fullName: String!
+  diagnosis: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  createdBy: String!
+  updatedBy: String!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type PaginationMeta {
+  page: Int!
+  limit: Int!
+  totalItems: Int!
+  totalPages: Int!
+  hasNextPage: Boolean!
+  hasPrevPage: Boolean!
+}
+
+type CmsPatientListResponse {
+  items: [CmsPatient!]!
+  meta: PaginationMeta!
+}
+
 type CmsUser {
   sub: String!
   role: String!
@@ -9,5 +40,24 @@ type CmsUser {
 
 type Query {
   getHealth: String!
+  getPatientList(input: PatientListArgs): CmsPatientListResponse!
   getProfile: CmsUser!
+}
+
+input PatientListArgs {
+  page: Int! = 1
+  limit: Int! = 20
+}
+
+type Mutation {
+  storeNewPatient(data: CreateDto!): CmsPatient!
+}
+
+input CreateDto {
+  idCard: String!
+  fullName: String!
+  diagnosis: String!
+  birthDate: String!
+  gender: String!
+  changeType: String!
 }
