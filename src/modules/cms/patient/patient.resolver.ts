@@ -1,6 +1,6 @@
 import type { GqlContext } from '@common/auth/guard/gql.guard';
 import { GqlAuthGuard } from '@common/auth/guard/gql.guard';
-import { HttpException, UseGuards } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { CreateDto, PatientListArgs } from './requests/cms.patient.request';
 import { CmsPatientService } from './services/cms.patient.service';
@@ -86,12 +86,6 @@ export class PatientResolver {
   ): Promise<CmsPatient> {
     const sub = ctx.user?.sub ?? '';
     const role = ctx.user?.role ?? null;
-    if (!role) {
-      throw new HttpException(
-        'You are not allowed to perform this action',
-        403,
-      );
-    }
 
     return this.cmsPatientService.store({ sub, role }, data);
   }

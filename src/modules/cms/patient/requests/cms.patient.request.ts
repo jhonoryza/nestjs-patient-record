@@ -1,5 +1,5 @@
 import { Field, InputType, Int } from '@nestjs/graphql';
-import { EChangeType, EGender, ERole } from '@utils/enum';
+import { EChangeType, EGender } from '@utils/enum';
 import {
   IsDateString,
   IsEnum,
@@ -10,11 +10,6 @@ import {
   Max,
   Min,
 } from 'class-validator';
-
-export type RequesterDto = {
-  sub: string;
-  role: ERole;
-};
 
 @InputType()
 export class PatientListArgs {
