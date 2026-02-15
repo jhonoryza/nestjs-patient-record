@@ -5,7 +5,7 @@ import { ERole, EStatus } from '@utils/enum';
 import { DateTime } from 'luxon';
 import { QueryTypes } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript';
-import { CreateDto, RequesterDto } from '../requests/cms.patient.request';
+import { CreateDto } from '../requests/cms.patient.request';
 import {
   CmsPatient,
   CmsPatientListResponse,
@@ -30,6 +30,11 @@ type PatientRowWithCount = PatientRow & {
 type PaginationArgs = {
   page?: number;
   limit?: number;
+};
+
+type RequesterDto = {
+  sub: string;
+  role: ERole | null;
 };
 
 @Injectable()
@@ -107,6 +112,13 @@ export class CmsPatientService {
     requesterDto: RequesterDto,
     dataDto: CreateDto,
   ): Promise<CmsPatient> {
+    if (!requesterDto.role) {
+      throw new HttpException(
+        'You are not allowed to perform this action',
+        403,
+      );
+    }
+
     if (requesterDto.role === ERole.ADMIN) {
       throw new HttpException(
         'You are not allowed to perform this action',

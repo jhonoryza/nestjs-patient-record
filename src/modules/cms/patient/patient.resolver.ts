@@ -17,7 +17,7 @@ export class PatientResolver {
    *
    *
    query {
-     getPatientList(input: { page: 1, limit: 10 }) {
+     getPatients(input: { page: 1, limit: 10 }) {
        items {
          id
          idCard
@@ -42,7 +42,7 @@ export class PatientResolver {
    */
   @Query(() => CmsPatientListResponse)
   @UseGuards(GqlAuthGuard)
-  getPatientList(
+  getPatients(
     @Args('input', { type: () => PatientListArgs, nullable: true })
     input?: PatientListArgs,
   ): Promise<CmsPatientListResponse> {
@@ -55,7 +55,7 @@ export class PatientResolver {
   /**
    *
    mutation {
-     storeNewPatient(
+     storePatient(
        data: {
          idCard: "1234567890"
          fullName: "John Doe"
@@ -80,7 +80,7 @@ export class PatientResolver {
    */
   @UseGuards(GqlAuthGuard)
   @Mutation(() => CmsPatient)
-  storeNewPatient(
+  storePatient(
     @Context() ctx: GqlContext,
     @Args('data', { type: () => CreateDto }) data: CreateDto,
   ): Promise<CmsPatient> {

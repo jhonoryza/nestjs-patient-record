@@ -40,7 +40,7 @@ type CmsUser {
 
 type Query {
   getHealth: String!
-  getPatientList(input: PatientListArgs): CmsPatientListResponse!
+  getPatients(input: PatientListArgs): CmsPatientListResponse!
   getProfile: CmsUser!
 }
 
@@ -50,7 +50,7 @@ input PatientListArgs {
 }
 
 type Mutation {
-  storeNewPatient(data: CreateDto!): CmsPatient!
+  storePatient(data: CreateDto!): CmsPatient!
 }
 
 input CreateDto {
