@@ -25,6 +25,8 @@ up migration
 npm run migrate core up
 ```
 
+this will create tables and initial data in database
+
 down migration
 
 ```bash
@@ -70,7 +72,72 @@ npm run test:e2e
 npm run test:cov
 ```
 
+## REST API
+
+### Authentication
+
+#### Login
+Authenticate user with email and password.
+
+**Endpoint:** `POST /v1/auth/login`
+
+login as admin
+
+**Request Body:**
+```json
+{
+  "email": "admin@mail.com",
+  "password": "password"
+}
+```
+
+login as doctor
+
+**Request Body:**
+```json
+{
+  "email": "doctor@mail.com",
+  "password": "password"
+}
+```
+
+**Response:**
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expiresIn": 3600,
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+#### Refresh Token
+Get a new access token using a refresh token.
+
+**Endpoint:** `POST /v1/auth/refresh`
+
+**Request Body:**
+```json
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Response:**
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expiresIn": 3600
+}
+```
+
 ## GraphQL
+
+**Authorization:** All GraphQL endpoints except `getHealth` require an `Authorization` header with a Bearer token obtained from the login endpoint.
+
+**Example:**
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
 
 ### Queries
 
